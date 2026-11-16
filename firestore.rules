@@ -1,0 +1,77 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.uid == "cFKKinKKJUdrxkjcVFGjAkXhlbK2";
+    }
+
+    match /enquiries/{enquiryId} {
+
+      allow create: if
+
+        request.resource.data.keys().hasAll([
+          'name',
+          'phone',
+          'requirement',
+          'category',
+          'subcategory',
+          'viewed',
+          'communityConsent',
+          'createdAt'
+        ])
+
+        && request.resource.data.keys().hasOnly([
+          'name',
+          'phone',
+          'requirement',
+          'category',
+          'subcategory',
+          'viewed',
+          'communityConsent',
+          'createdAt'
+        ])
+
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 100
+
+        && request.resource.data.phone is string
+        && request.resource.data.phone.matches('^[0-9]{10}$')
+
+        && request.resource.data.requirement is string
+        && request.resource.data.requirement.size() >= 3
+        && request.resource.data.requirement.size() <= 2000
+
+        && request.resource.data.category == ""
+        && request.resource.data.subcategory == ""
+        && request.resource.data.viewed == false
+        && request.resource.data.communityConsent is bool
+
+        && request.resource.data.createdAt == request.time;
+
+      allow read: if isAdmin();
+
+      allow update: if isAdmin()
+
+        && request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly([
+            'category',
+            'subcategory',
+            'viewed'
+          ])
+
+        && request.resource.data.category is string
+        && request.resource.data.category.size() <= 100
+
+        && request.resource.data.subcategory is string
+        && request.resource.data.subcategory.size() <= 100
+
+        && request.resource.data.viewed is bool;
+
+      allow delete: if false;
+    }
+  }
+}
